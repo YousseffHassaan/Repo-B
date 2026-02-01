@@ -1,15 +1,46 @@
-name: Triggered from Repo A
+name: Repo B Tests
 
 on:
   repository_dispatch:
     types: [run-tests]
 
 jobs:
-  run-tests:
+  tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo B
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Run Tests
-        run: mvn test
+      - name: Run tests
+        id: tests
+        run: |
+          mvn test
+
+      # Report success
+      - name: Report success to Repo A
+        if: success()
+        run: |
+          curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.REPO_A_PAT }}" \
+          -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/${{ github.event.client_payload.repo }}/statuses/${{ github.event.client_payload.sha }} \
+          -d '{
+            "state":"success",
+            "context":"Automation Tests",
+            "description":"All tests passed ✅",
+            "target_url":"https://github.com/'${{ github.repository }}'/actions/runs/'${{ github.run_id }}'"
+          }'
+
+      # Report failure
+      - name: Report failure to Repo A
+        if: failure()
+        run: |
+          curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.REPO_A_PAT }}" \
+          -H "Accept: application/vnd.github+json" \
+          https://api.github.com/repos/${{ github.event.client_payload.repo }}/statuses/${{ github.event.client_payload.sha }} \
+          -d '{
+            "state":"failure",
+            "context":"Automation Tests",
+            "description":"Some tests failed ❌",
+            "target_url":"https://github.com/'${{ github.repository }}'/actions/runs/'${{ github.run_id }}'"
+          }'
