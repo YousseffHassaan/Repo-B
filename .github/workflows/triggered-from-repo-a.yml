@@ -1,0 +1,15 @@
+name: Triggered from Repo A
+
+on:
+  repository_dispatch:
+    types: [run-tests]
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo B
+        uses: actions/checkout@v4
+
+      - name: Run Tests
+        run: mvn test
